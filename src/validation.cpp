@@ -2317,8 +2317,8 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
     // Note: the blocks specified here are different than the ones used in ConnectBlock because DisconnectBlock
     // unwinds the blocks in reverse. As a result, the inconsistency is not discovered until the earlier
     // blocks with the duplicate coinbase transactions are disconnected.
-    bool fEnforceBIP30 = !((pindex->nHeight==91722 && pindex->GetBlockHash() == uint256{"00000000000271a2dc26e7667f8419f2e15416dc6955e5a6c6cdf3f2574dd08e"}) ||
-                           (pindex->nHeight==91812 && pindex->GetBlockHash() == uint256{"00000000000af0aed4792b1acee3d966af36cf5def14935db8de83d6f9306f2f"}));
+    bool fEnforceBIP30 = !((pindex->nHeight==2020 && pindex->GetBlockHash() == uint256{"00000004e2da0eb4cbda629d57bfa8fb812dbfffc73703a5b48ff522eefab5d2"}) ||
+                           (pindex->nHeight==2021 && pindex->GetBlockHash() == uint256{"00000002002ebe1b2bf4610daf00450280bb3a3262623d3b6fe14966cbd8a425"}));
 
     // undo transactions in reverse order
     for (int i = block.vtx.size() - 1; i >= 0; i--) {

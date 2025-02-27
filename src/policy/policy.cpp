@@ -39,41 +39,33 @@ CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
     // so dust is a spendable txout less than
     // 98*dustRelayFee/1000 (in satoshis).
     // 294 satoshis at the default rate of 3000 sat/kvB.
-    if (txout.scriptPubKey.IsUnspendable())
-        return 0;
+    // if (txout.scriptPubKey.IsUnspendable())
+    return 0;
 
-    size_t nSize = GetSerializeSize(txout);
-    int witnessversion = 0;
-    std::vector<unsigned char> witnessprogram;
+    // size_t nSize = GetSerializeSize(txout);
+    // int witnessversion = 0;
+    // std::vector<unsigned char> witnessprogram;
 
-    // Note this computation is for spending a Segwit v0 P2WPKH output (a 33 bytes
-    // public key + an ECDSA signature). For Segwit v1 Taproot outputs the minimum
-    // satisfaction is lower (a single BIP340 signature) but this computation was
-    // kept to not further reduce the dust level.
-    // See discussion in https://github.com/bitcoin/bitcoin/pull/22779 for details.
-    if (txout.scriptPubKey.IsWitnessProgram(witnessversion, witnessprogram)) {
-        // sum the sizes of the parts of a transaction input
-        // with 75% segwit discount applied to the script size.
-        nSize += (32 + 4 + 1 + (107 / WITNESS_SCALE_FACTOR) + 4);
-    } else {
-        nSize += (32 + 4 + 1 + 107 + 4); // the 148 mentioned above
-    }
+    // // Note this computation is for spending a Segwit v0 P2WPKH output (a 33 bytes
+    // // public key + an ECDSA signature). For Segwit v1 Taproot outputs the minimum
+    // // satisfaction is lower (a single BIP340 signature) but this computation was
+    // // kept to not further reduce the dust level.
+    // // See discussion in https://github.com/bitcoin/bitcoin/pull/22779 for details.
+    // if (txout.scriptPubKey.IsWitnessProgram(witnessversion, witnessprogram)) {
+    //     // sum the sizes of the parts of a transaction input
+    //     // with 75% segwit discount applied to the script size.
+    //     nSize += (32 + 4 + 1 + (107 / WITNESS_SCALE_FACTOR) + 4);
+    // } else {
+    //     nSize += (32 + 4 + 1 + 107 + 4); // the 148 mentioned above
+    // }
 
-    return dustRelayFeeIn.GetFee(nSize);
+    // return dustRelayFeeIn.GetFee(nSize);
 }
 
 bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
 {
-    return (txout.nValue < GetDustThreshold(txout, dustRelayFeeIn));
-}
-
-std::vector<uint32_t> GetDust(const CTransaction& tx, CFeeRate dust_relay_rate)
-{
-    std::vector<uint32_t> dust_outputs;
-    for (uint32_t i{0}; i < tx.vout.size(); ++i) {
-        if (IsDust(tx.vout[i], dust_relay_rate)) dust_outputs.push_back(i);
-    }
-    return dust_outputs;
+    //return (txout.nValue < GetDustThreshold(txout, dustRelayFeeIn));
+    return false;
 }
 
 bool IsStandard(const CScript& scriptPubKey, const std::optional<unsigned>& max_datacarrier_bytes, TxoutType& whichType)
@@ -102,7 +94,7 @@ bool IsStandard(const CScript& scriptPubKey, const std::optional<unsigned>& max_
 
 bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_datacarrier_bytes, bool permit_bare_multisig, const CFeeRate& dust_relay_fee, std::string& reason)
 {
-    if (tx.version > TX_MAX_STANDARD_VERSION || tx.version < 1) {
+    if (tx.nVersion > TX_MAX_STANDARD_VERSION || tx.nVersion < 1) {
         reason = "version";
         return false;
     }
@@ -120,7 +112,7 @@ bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_dat
     for (const CTxIn& txin : tx.vin)
     {
         // Biggest 'standard' txin involving only keys is a 15-of-15 P2SH
-        // multisig with compressed keys (remember the MAX_SCRIPT_ELEMENT_SIZE byte limit on
+        // multisig with compressed keys (remember the 520 byte limit on
         // redeemScript size). That works out to a (15*(33+1))+3=513 byte
         // redeemScript, 513+1+15*(73+1)+3=1627 bytes of scriptSig, which
         // we round off to 1650(MAX_STANDARD_SCRIPTSIG_SIZE) bytes for
@@ -150,13 +142,10 @@ bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_dat
         else if ((whichType == TxoutType::MULTISIG) && (!permit_bare_multisig)) {
             reason = "bare-multisig";
             return false;
+        } else if (IsDust(txout, dust_relay_fee)) {
+            reason = "dust";
+            return false;
         }
-    }
-
-    // Only MAX_DUST_OUTPUTS_PER_TX dust is permitted(on otherwise valid ephemeral dust)
-    if (GetDust(tx, dust_relay_fee).size() > MAX_DUST_OUTPUTS_PER_TX) {
-        reason = "dust";
-        return false;
     }
 
     // only one OP_RETURN txout is permitted
